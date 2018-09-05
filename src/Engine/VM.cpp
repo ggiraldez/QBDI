@@ -277,6 +277,44 @@ uint32_t VM::addMemAccessCB(MemoryAccessType type, InstCallback cbk, void *data)
     }
 }
 
+std::pair<uint32_t, uint32_t> VM::addMemCheckCB(InstCallback cbk, void *data) {
+    uint32_t readAccessID = addInstrRule(
+         InstrRule(
+              DoesReadAccess(),
+              {
+                   GetReadAddress(Temp(0)),
+                   WriteTemp(Temp(0), Shadow(MEM_READ_ADDRESS_TAG)),
+                   GetConstant(Temp(0), Constant((rword) 0)),
+                   WriteTemp(Temp(0), Shadow(MEM_VALUE_TAG)),
+                   GetConstant(Temp(0), Constant((rword) cbk)),
+                   WriteTemp(Temp(0), Offset(offsetof(Context, hostState.callback))),
+                   GetConstant(Temp(0), Constant((rword) data)),
+                   WriteTemp(Temp(0), Offset(offsetof(Context, hostState.data))),
+                   GetInstId(Temp(0)),
+                   WriteTemp(Temp(0), Offset(offsetof(Context, hostState.origin))),
+              },
+              InstPosition::PREINST,
+              true));
+    uint32_t writeAccessID = addInstrRule(
+         InstrRule(
+              DoesWriteAccess(),
+              {
+                   GetWriteAddress(Temp(0)),
+                   WriteTemp(Temp(0), Shadow(MEM_WRITE_ADDRESS_TAG)),
+                   GetConstant(Temp(0), Constant((rword) 0)),
+                   WriteTemp(Temp(0), Shadow(MEM_VALUE_TAG)),
+                   GetConstant(Temp(0), Constant((rword) cbk)),
+                   WriteTemp(Temp(0), Offset(offsetof(Context, hostState.callback))),
+                   GetConstant(Temp(0), Constant((rword) data)),
+                   WriteTemp(Temp(0), Offset(offsetof(Context, hostState.data))),
+                   GetInstId(Temp(0)),
+                   WriteTemp(Temp(0), Offset(offsetof(Context, hostState.origin))),
+              },
+              InstPosition::PREINST,
+              true));
+
+    return std::make_pair(readAccessID, writeAccessID);
+}
 
 uint32_t VM::addMemAddrCB(rword address, MemoryAccessType type, InstCallback cbk, void *data) {
     RequireAction("VM::addMemAddrCB", cbk != nullptr, return VMError::INVALID_EVENTID);
@@ -391,7 +429,8 @@ std::vector<MemoryAccess> VM::getInstMemoryAccess() const {
             access.type = MEMORY_READ;
             access.size = getReadSize(curExecBlock->getOriginalMCInst(instID));
         }
-        else if(engine->isPreInst() == false && shadows[i].tag == MEM_WRITE_ADDRESS_TAG) {
+        // TODO: why was this condition here?
+        else if(/* engine->isPreInst() == false && */ shadows[i].tag == MEM_WRITE_ADDRESS_TAG) {
             access.type = MEMORY_WRITE;
             access.size = getWriteSize(curExecBlock->getOriginalMCInst(instID));
         }

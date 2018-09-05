@@ -276,6 +276,8 @@ class QBDI_EXPORT VM {
      */
     uint32_t    addMemAddrCB(rword address, MemoryAccessType type, InstCallback cbk, void *data);
 
+    std::pair<uint32_t, uint32_t> addMemCheckCB(InstCallback cbk, void *data);
+
     /*! Add a virtual callback which is triggered for any memory access in a specific address range 
      *  matching the access type. Virtual callbacks are called via callback forwarding by a 
      *  gate callback triggered on every memory access. This incurs a high performance cost.
